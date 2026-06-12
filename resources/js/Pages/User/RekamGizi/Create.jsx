@@ -8,7 +8,7 @@ export default function UserRekamGiziCreate() {
   const { pengguna } = usePage().props;
   return (
     <LayoutUser>
-      <div className="page-stack">
+      <div className="page-stack nutrition-create-page">
         <div className="page-header">
           <Link href={"/"} className="back-link" aria-label="Kembali">
             <FontAwesomeIcon icon={faArrowLeft} />
@@ -18,7 +18,9 @@ export default function UserRekamGiziCreate() {
             <p className="page-subtitle">Isi data diri Anda dengan benar</p>
           </div>
         </div>
-        <FormRekamGizi pengguna={pengguna} type="user" />
+        <div className="nutrition-create-scroll">
+          <FormRekamGizi pengguna={pengguna} type="user" />
+        </div>
       </div>
     </LayoutUser>
   );

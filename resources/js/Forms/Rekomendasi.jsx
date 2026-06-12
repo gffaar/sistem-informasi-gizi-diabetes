@@ -2,12 +2,12 @@ import { useForm } from "@inertiajs/react";
 
 export default function FormRekomendasi({
   pengguna = {
-    id,
-    user_id,
-    jenis_kelamin,
-    tanggal_lahir,
-    tinggi_cm,
-    berat_kg,
+    id: "",
+    user_id: "",
+    jenis_kelamin: "",
+    tanggal_lahir: "",
+    tinggi_cm: "",
+    berat_kg: "",
   },
   rekomendasi = {
     id: 0,
@@ -16,30 +16,19 @@ export default function FormRekomendasi({
     jumlah: 1,
     waktu_makan: "",
   },
-  makanans = [
-    {
-      id: 0,
-      kategori: 0,
-      kalori: 0,
-      karbohidrat: 0,
-      protein: 0,
-      lemak: 0,
-      satuan: "",
-      gambar: null,
-    },
-  ],
+  makanans = [],
   type = "admin",
 }) {
-  const { data, setData, post, put, processing, errors, progress } = useForm({
-    pengguna_id: pengguna.id,
-    menu_makanan_id: rekomendasi.menu_makanan_id,
-    jumlah: rekomendasi.jumlah,
-    waktu_makan: rekomendasi.waktu_makan,
+  const { data, setData, post, processing, errors, progress } = useForm({
+    pengguna_id: pengguna?.id || "",
+    menu_makanan_id: rekomendasi.menu_makanan_id || "",
+    jumlah: rekomendasi.jumlah || 1,
+    waktu_makan: rekomendasi.waktu_makan || "",
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (type == "admin") {
+    if (type === "admin") {
       post(`/admin/pengguna/${pengguna.id}/menu-rekomendasi`);
     } else {
       post(`/user/menu-rekomendasi`);
@@ -53,11 +42,12 @@ export default function FormRekomendasi({
 
         <label className="label">Makanan</label>
         <select
-          defaultValue={data.menu_makanan_id || "Pilih Makanan"}
+          value={data.menu_makanan_id}
           className="select"
           onChange={(e) => setData("menu_makanan_id", e.target.value)}
+          disabled={makanans.length === 0}
         >
-          <option disabled={true}>Pilih Makanan</option>
+          <option value="">Pilih Makanan</option>
           {makanans.map((makanan) => (
             <option key={makanan.id} value={makanan.id}>
               {makanan.nama} ({makanan.kalori} kalori)
@@ -81,14 +71,14 @@ export default function FormRekomendasi({
 
         <label className="label">Waktu Makan</label>
         <select
-          defaultValue={data.waktu_makan || "Pilih Waktu Makan"}
+          value={data.waktu_makan}
           className="select"
           onChange={(e) => setData("waktu_makan", e.target.value)}
         >
-          <option disabled={true}>Pilih Waktu Makan</option>
-          <option>Pagi</option>
-          <option>Siang</option>
-          <option>Malam</option>
+          <option value="">Pilih Waktu Makan</option>
+          <option value="Pagi">Pagi</option>
+          <option value="Siang">Siang</option>
+          <option value="Malam">Malam</option>
         </select>
         {errors.waktu_makan && (
           <span className="text-error">{errors.waktu_makan}</span>
@@ -100,8 +90,17 @@ export default function FormRekomendasi({
           </progress>
         )}
 
-        <button className="btn btn-primary w-full mt-4" disabled={processing}>
-          Simpan
+        {makanans.length === 0 && (
+          <p className="empty-state__text text-center">
+            Data makanan belum tersedia.
+          </p>
+        )}
+
+        <button
+          className="btn btn-primary w-full mt-4"
+          disabled={processing || makanans.length === 0}
+        >
+          {processing ? "Menyimpan..." : "Simpan"}
         </button>
       </fieldset>
     </form>

@@ -1,8 +1,8 @@
 import {
   faBowlFood,
   faCalculator,
+  faClockRotateLeft,
   faHouse,
-  faNewspaper,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -20,7 +20,7 @@ const navItems = [
     href: "/user/rekam-gizi/create",
     label: "Hitung",
     icon: faCalculator,
-    matches: ["/user/rekam-gizi"],
+    matches: ["/user/rekam-gizi/create"],
   },
   {
     href: "/user/menu-rekomendasi",
@@ -29,10 +29,11 @@ const navItems = [
     matches: ["/user/menu-rekomendasi", "/user/menu-makanan"],
   },
   {
-    href: "/user/informasi",
-    label: "Informasi",
-    icon: faNewspaper,
-    matches: ["/user/informasi"],
+    href: "/user/rekam-gizi",
+    label: "Riwayat",
+    icon: faClockRotateLeft,
+    matches: ["/user/rekam-gizi"],
+    excludes: ["/user/rekam-gizi/create"],
   },
   {
     href: "/account",
@@ -43,11 +44,21 @@ const navItems = [
 ];
 
 function isActive(url, item) {
+  const currentPath = `/${String(url || "")
+    .split("?")[0]
+    .split("#")[0]
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "")}`;
+
   if (item.href === "/") {
-    return url === "/";
+    return currentPath === "/";
   }
 
-  return item.matches.some((path) => url.startsWith(path));
+  if (item.excludes?.some((path) => currentPath.startsWith(path))) {
+    return false;
+  }
+
+  return item.matches.some((path) => currentPath.startsWith(path));
 }
 
 export default function LayoutUser({ children }) {

@@ -15,8 +15,7 @@ export default function FormMakanan({
   },
   type = "create",
 }) {
-
-  const { data, setData, post, put, processing, errors, progress } = useForm({
+  const { data, setData, post, processing, errors, progress } = useForm({
     nama: makanan.nama || "",
     kategori: makanan.kategori || "",
     kalori: makanan.kalori || "",
@@ -28,14 +27,12 @@ export default function FormMakanan({
     _method: type === "create" ? "POST" : "PUT",
   });
 
-  console.log(data);
-
   const [preview, setPreview] = useState(makanan.gambar ? `/storage/${makanan.gambar}` : null);
 
   function submit(e) {
     e.preventDefault();
     if (type === "create") {
-    post("/admin/menu-makanan");
+      post("/admin/menu-makanan");
     } else {
       post(`/admin/menu-makanan/${makanan.id}`);
     }
@@ -43,6 +40,11 @@ export default function FormMakanan({
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+
+    if (!file) {
+      return;
+    }
+
     setData("gambar", file);
     setPreview(URL.createObjectURL(file));
   };
@@ -64,17 +66,17 @@ export default function FormMakanan({
 
         <label className="label">Kategori</label>
         <select
-          defaultValue={data.kategori}
+          value={data.kategori}
           className="select"
           onChange={(e) => setData("kategori", e.target.value)}
         >
-          <option disabled={true}>Pilih Kategori</option>
-          <option>Karbo</option>
-          <option>Protein</option>
-          <option>Lemak</option>
-          <option>Sayur</option>
-          <option>Buah</option>
-          <option>Lain-lain</option>
+          <option value="">Pilih Kategori</option>
+          <option value="Karbo">Karbo</option>
+          <option value="Protein">Protein</option>
+          <option value="Lemak">Lemak</option>
+          <option value="Sayur">Sayur</option>
+          <option value="Buah">Buah</option>
+          <option value="Lain-lain">Lain-lain</option>
         </select>
         {errors.kategori && (
           <span className="text-error">{errors.kategori}</span>
@@ -163,7 +165,7 @@ export default function FormMakanan({
         )}
 
         <button className="btn btn-primary w-full mt-4" disabled={processing}>
-          Simpan
+          {processing ? "Menyimpan..." : "Simpan"}
         </button>
       </fieldset>
     </form>

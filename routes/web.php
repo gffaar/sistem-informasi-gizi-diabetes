@@ -12,9 +12,10 @@ Route::group(['middleware' => [\App\Http\Middleware\AuthMiddleware::class]], fun
     Route::get('/', \App\Http\Controllers\DashboardController::class)->name('index');
 
     Route::get('/account', [\App\Http\Controllers\AccountController::class, 'index'])->name('account.index');
+    Route::get('/account/profil-user', [\App\Http\Controllers\AccountController::class, 'profileUser'])->name('account.profile-user');
     Route::get('/informasi-data-pribadi-user', [\App\Http\Controllers\InformasiDataPribadiUserController::class, 'index'])->name('informasi-data-pribadi-user.index');
     Route::post('/informasi-data-pribadi-user/update', [\App\Http\Controllers\InformasiDataPribadiUserController::class, 'update'])->name('informasi-data-pribadi-user.update');
-    Route::get('/account/data', fn() => redirect()->route('informasi-data-pribadi-user.index'))->name('account.data');
+    Route::get('/account/data', fn () => redirect()->route('informasi-data-pribadi-user.index'))->name('account.data');
     Route::post('/account/update', [\App\Http\Controllers\AccountController::class, 'update'])->name('account.update');
     Route::get('/account/edit', [\App\Http\Controllers\AccountController::class, 'edit'])->name('account.edit');
     Route::post('/account/edit', [\App\Http\Controllers\AccountController::class, 'update'])->name('account.update.legacy');
@@ -24,32 +25,34 @@ Route::group(['middleware' => [\App\Http\Middleware\AuthMiddleware::class]], fun
     Route::put('/account/password', [\App\Http\Controllers\AccountController::class, 'updatePassword'])->name('account.password.update');
 });
 
-Route::group(['middleware' => [\App\Http\Middleware\AuthMiddleware::class], 'prefix' => 'admin', 'as' => 'admin.'], function () {
+Route::group(['middleware' => [\App\Http\Middleware\AuthMiddleware::class, \App\Http\Middleware\EnsureUserRole::class.':admin'], 'prefix' => 'admin', 'as' => 'admin.'], function () {
     // Pengguna (Pasien)
-    Route::resource('pengguna', \App\Http\Controllers\Admin\PenggunaController::class)->except(['create', 'store']);
+    Route::resource('pengguna', \App\Http\Controllers\Admin\PenggunaController::class)->only(['index', 'show', 'destroy']);
 
     // Rekam Gizi
-    Route::resource('pengguna.rekam-gizi', \App\Http\Controllers\Admin\RekamGiziController::class)->parameter('rekam-gizi', 'rekamGizi');
+    Route::get('rekam-gizi', [\App\Http\Controllers\Admin\RekamGiziController::class, 'all'])->name('rekam-gizi.index');
+    Route::resource('pengguna.rekam-gizi', \App\Http\Controllers\Admin\RekamGiziController::class)
+        ->parameter('rekam-gizi', 'rekamGizi')
+        ->except(['edit', 'update']);
 
     // Menu Rekomendasi
-    Route::resource('pengguna.menu-rekomendasi', \App\Http\Controllers\Admin\MenuRekomendasiController::class)->parameter('menu-rekomendasi', 'menuRekomendasi');
+    Route::resource('pengguna.menu-rekomendasi', \App\Http\Controllers\Admin\MenuRekomendasiController::class)
+        ->parameter('menu-rekomendasi', 'menuRekomendasi')
+        ->only(['index', 'create', 'store', 'destroy']);
     Route::post('pengguna/{pengguna}/menu-rekomendasi/otomatis-pilih/{rekamGizi}', [App\Http\Controllers\Admin\MenuRekomendasiController::class, 'otomatisPilih'])->name('menu-rekomendasi.otomatis-pilih');
 
     // Menu Makanan
     Route::resource('menu-makanan', \App\Http\Controllers\Admin\MenuMakananController::class)->parameter('menu-makanan', 'menuMakanan');
     // Sistem Informasi
     Route::resource('informasi', \App\Http\Controllers\Admin\InformasiController::class);
-    // edukasi gizi
-    Route::resource('edukasi',\App\Http\Controllers\Admin\EdukasiController::class)->parameter('edukasi', 'edukasi');
-    route::get('edukasi/{edukasi}/download', [\App\Http\Controllers\Admin\EdukasiController::class, 'download'])->name('edukasi.download');
-
 });
 
-Route::group(['middleware' => [\App\Http\Middleware\AuthMiddleware::class], 'prefix' => 'user', 'as' => 'user.'], function () {
+Route::group(['middleware' => [\App\Http\Middleware\AuthMiddleware::class, \App\Http\Middleware\EnsureUserRole::class.':user'], 'prefix' => 'user', 'as' => 'user.'], function () {
     // Pengguna (Pasien)
     // Route::resource('pengguna', \App\Http\Controllers\Admin\PenggunaController::class)->except(['create','store']);
 
     // Rekam Gizi
+    Route::post('rekam-gizi/{rekamGizi}/simpan-hasil', [\App\Http\Controllers\User\RekamGiziController::class, 'saveResult'])->name('rekam-gizi.save-result');
     Route::resource('rekam-gizi', \App\Http\Controllers\User\RekamGiziController::class)
         ->parameter('rekam-gizi', 'rekamGizi')
         ->except(['edit', 'update']);
@@ -67,7 +70,4 @@ Route::group(['middleware' => [\App\Http\Middleware\AuthMiddleware::class], 'pre
     // Sistem Informasi
     Route::resource('informasi', \App\Http\Controllers\User\InformasiController::class)
         ->only(['index', 'show']);
-        // edukasi gizi
-    Route::resource('edukasi',\App\Http\Controllers\User\EdukasiController::class)->parameter('edukasi', 'edukasi')->only(['index', 'show']);
-    Route::get('edukasi/{edukasi}/download', [\App\Http\Controllers\User\EdukasiController::class, 'download'])->name('edukasi.download');
 });

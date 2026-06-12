@@ -14,13 +14,12 @@ class MenuMakananController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $search = request()->query('search');
+        $search = $request->query('search');
         $menuMakanan = MenuMakanan::query()->when(
             $search,
-            fn($query) =>
-            $query->where('nama', 'like', '%' . $search . '%')
+            fn ($query) => $query->where('nama', 'like', '%'.$search.'%')
         )
             ->latest()
             ->paginate(10)
@@ -28,7 +27,7 @@ class MenuMakananController extends Controller
 
         return Inertia::render('Admin/Makanan/Index', [
             'makanans' => $menuMakanan,
-            'filters' => request()->only(['search']),
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -49,7 +48,7 @@ class MenuMakananController extends Controller
             'nama' => [
                 'required',
                 'string',
-                'max:255'
+                'max:255',
             ],
             'kategori' => [
                 'required',
@@ -60,28 +59,28 @@ class MenuMakananController extends Controller
                     'Lemak',
                     'Sayur',
                     'Buah',
-                    'Lain-lain'
-                ])
+                    'Lain-lain',
+                ]),
             ],
             'kalori' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'karbohidrat' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'protein' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'lemak' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'satuan' => [
                 'required',
@@ -91,11 +90,11 @@ class MenuMakananController extends Controller
                 'nullable',
                 'image',
                 'mimes:jpeg,png,jpg,gif,svg',
-                'max:2048'
-            ]
+                'max:2048',
+            ],
         ]);
 
-        $menuMakanan = new MenuMakanan();
+        $menuMakanan = new MenuMakanan;
         $menuMakanan->nama = $request->input('nama');
         $menuMakanan->kategori = $request->input('kategori');
         $menuMakanan->kalori = $request->input('kalori');
@@ -120,7 +119,7 @@ class MenuMakananController extends Controller
     public function show(MenuMakanan $menuMakanan)
     {
         return Inertia::render('Admin/Makanan/Show', [
-            'makanan' => $menuMakanan
+            'makanan' => $menuMakanan,
         ]);
     }
 
@@ -130,7 +129,7 @@ class MenuMakananController extends Controller
     public function edit(MenuMakanan $menuMakanan)
     {
         return Inertia::render('Admin/Makanan/Edit', [
-            'makanan' => $menuMakanan
+            'makanan' => $menuMakanan,
         ]);
     }
 
@@ -139,12 +138,11 @@ class MenuMakananController extends Controller
      */
     public function update(Request $request, MenuMakanan $menuMakanan)
     {
-        // dd($request);
         $request->validate([
             'nama' => [
                 'required',
                 'string',
-                'max:255'
+                'max:255',
             ],
             'kategori' => [
                 'required',
@@ -155,28 +153,28 @@ class MenuMakananController extends Controller
                     'Lemak',
                     'Sayur',
                     'Buah',
-                    'Lain-lain'
-                ])
+                    'Lain-lain',
+                ]),
             ],
             'kalori' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'karbohidrat' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'protein' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'lemak' => [
                 'required',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'satuan' => [
                 'required',
@@ -186,8 +184,8 @@ class MenuMakananController extends Controller
                 'nullable',
                 'image',
                 'mimes:jpeg,png,jpg,gif,svg',
-                'max:2048'
-            ]
+                'max:2048',
+            ],
         ]);
 
         $menuMakanan->nama = $request->input('nama');

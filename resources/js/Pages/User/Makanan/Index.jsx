@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import LayoutUser from "../../../Layouts/User";
 
 export default function UserMakananIndex() {
-  const { makanans, filters } = usePage().props;
+  const { makanans, filters = {} } = usePage().props;
+  const items = makanans?.data ?? [];
 
   const [search, setSearch] = useState(filters.search || "");
 
@@ -36,10 +37,11 @@ export default function UserMakananIndex() {
           type="text"
           placeholder="Cari Makanan"
           className="input input-bordered w-full"
+          value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <div className="content-card-grid">
-          {makanans.data.map((makanan) => (
+          {items.map((makanan) => (
             <div key={makanan.id} className="card">
               <figure>
                 {makanan.gambar ? (
@@ -63,21 +65,29 @@ export default function UserMakananIndex() {
             </div>
           ))}
         </div>
+        {items.length === 0 && (
+          <section className="empty-state">
+            <p className="empty-state__title">Makanan tidak ditemukan</p>
+            <p className="empty-state__text">
+              Coba kata kunci lain atau cek kembali data makanan.
+            </p>
+          </section>
+        )}
         <div className="mt-4 flex justify-center gap-2">
-          {makanans.prev_page_url && (
+          {makanans?.prev_page_url && (
             <button
               onClick={() => goToPage(makanans.prev_page_url)}
               className="btn btn-primary"
             >
-              Previous
+              Sebelumnya
             </button>
           )}
-          {makanans.next_page_url && (
+          {makanans?.next_page_url && (
             <button
               onClick={() => goToPage(makanans.next_page_url)}
               className="btn btn-primary"
             >
-              Next
+              Berikutnya
             </button>
           )}
         </div>

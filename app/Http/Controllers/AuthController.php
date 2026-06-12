@@ -2,16 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Models\Pengguna;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 
 class AuthController extends Controller
 {
     public function formLogin()
     {
+        if (Auth::check()) {
+            return redirect()->route('index');
+        }
+
         return Inertia::render('Login');
     }
 
@@ -19,42 +24,79 @@ class AuthController extends Controller
     {
         $request->validate([
             'username' => ['required'],
-            'password' => ['required']
+            'password' => ['required'],
         ]);
 
         $credentials = $request->only('username', 'password');
 
-        if(auth()->attempt($credentials)){
+        if (Auth::attempt($credentials)) {
+            $request->session()->regenerate();
+
+            /** @var \App\Models\User|null $user */
+            $user = Auth::user();
+
+            if ($user && $user->role === 'admin') {
+                return redirect()->route('index');
+            }
+
             return redirect()->route('index');
         }
 
         return back()->withErrors([
-            'username' => 'The provided credentials do not match our records.',
+            'username' => 'Username atau password tidak sesuai.',
         ]);
     }
 
-    public function logout() {
-        auth()->logout();
+    public function logout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('auth.login.form');
     }
 
-    public function formDaftar() {
+    public function formDaftar()
+    {
+        if (Auth::check()) {
+            return redirect()->route('index');
+        }
+
         return Inertia::render('Daftar');
     }
 
-    public function daftar(Request $request) {
+    public function daftar(Request $request)
+    {
         $data = $request->validate([
             'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')],
-            'password' => ['required','min:3', 'confirmed', Password::min(3)],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
             'nama' => ['required', 'string', 'max:255'],
             'foto' => ['nullable', 'image', 'max:2048', 'mimes:jpg,jpeg,png,webp'],
-            'jenis_kelamin' => ['required', Rule::in(['Laki-laki','Perempuan'])],
+            'jenis_kelamin' => ['required', Rule::in(['Laki-laki', 'Perempuan'])],
             'tanggal_lahir' => ['required', 'date'],
             'tinggi_cm' => ['required', 'numeric'],
             'berat_kg' => ['required', 'numeric'],
+        ], [
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username sudah digunakan.',
+            'password.required' => 'Password wajib diisi.',
+            'password.string' => 'Password harus berupa teks.',
+            'password.min' => 'Password minimal 6 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak sama.',
+            'nama.required' => 'Nama wajib diisi.',
+            'jenis_kelamin.required' => 'Jenis kelamin wajib dipilih.',
+            'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
+            'tanggal_lahir.date' => 'Tanggal lahir tidak valid.',
+            'tinggi_cm.required' => 'Tinggi badan wajib diisi.',
+            'tinggi_cm.numeric' => 'Tinggi badan harus berupa angka.',
+            'berat_kg.required' => 'Berat badan wajib diisi.',
+            'berat_kg.numeric' => 'Berat badan harus berupa angka.',
+            'foto.image' => 'Foto harus berupa gambar.',
+            'foto.max' => 'Ukuran foto maksimal 2 MB.',
         ]);
 
-        $user = \App\Models\User::create([
+        $user = User::create([
             'username' => $data['username'],
             'password' => $data['password'],
             'nama' => $data['nama'],
@@ -62,7 +104,7 @@ class AuthController extends Controller
             'role' => 'user',
         ]);
 
-        \App\Models\Pengguna::create([
+        Pengguna::create([
             'user_id' => $user->id,
             'jenis_kelamin' => $data['jenis_kelamin'],
             'tanggal_lahir' => $data['tanggal_lahir'],
@@ -70,6 +112,9 @@ class AuthController extends Controller
             'berat_kg' => $data['berat_kg'],
         ]);
 
-        return redirect()->route('auth.login.form')->with('success', 'Akun berhasil dibuat. Silakan login.');
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return redirect()->route('index')->with('success', 'Akun berhasil dibuat');
     }
 }

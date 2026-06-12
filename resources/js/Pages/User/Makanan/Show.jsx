@@ -1,61 +1,119 @@
-import { Link, usePage } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import LayoutUser from "../../../Layouts/User";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowLeft,
+  faBowlFood,
+  faDroplet,
+  faFire,
+  faLeaf,
+} from "@fortawesome/free-solid-svg-icons";
+
+function formatNutrition(value) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  const number = Number(value);
+
+  if (Number.isNaN(number)) {
+    return "-";
+  }
+
+  const rounded = Number(number.toFixed(1));
+
+  return Number.isInteger(rounded)
+    ? String(rounded)
+    : rounded.toFixed(1).replace(/\.?0+$/, "");
+}
 
 export default function UserMakananShow() {
   const { makanan } = usePage().props;
   const gambar = makanan.gambar ? `/storage/${makanan.gambar}` : `/no_image.jpg`;
+  const nutritionItems = [
+    {
+      label: "Kalori",
+      value: makanan.kalori,
+      unit: "kkal",
+      icon: faFire,
+      highlight: true,
+    },
+    {
+      label: "Karbohidrat",
+      value: makanan.karbohidrat,
+      unit: "g",
+      icon: faBowlFood,
+    },
+    {
+      label: "Protein",
+      value: makanan.protein,
+      unit: "g",
+      icon: faLeaf,
+    },
+    {
+      label: "Lemak",
+      value: makanan.lemak,
+      unit: "g",
+      icon: faDroplet,
+    },
+    {
+      label: "Serat",
+      value: makanan.serat,
+      unit: "g",
+      icon: faLeaf,
+    },
+  ];
+
+  function handleBack() {
+    router.visit("/user/menu-rekomendasi");
+  }
 
   return (
     <LayoutUser>
-      <div className="page-stack">
-        <div className="page-header">
-          <Link
-            href={"/user/menu-makanan"}
-            className="back-link"
+      <div className="page-stack meal-detail-page">
+        <div className="page-header meal-detail-header">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="meal-detail-back"
             aria-label="Kembali"
           >
             <FontAwesomeIcon icon={faArrowLeft} />
-          </Link>
+          </button>
           <div className="page-header__content">
             <p className="page-title">Detail Makanan</p>
-            <p className="page-subtitle">Informasi kandungan gizi menu</p>
+            <p className="page-subtitle">Informasi gizi makanan yang dipilih</p>
           </div>
         </div>
 
-        <div className="card">
-          <figure>
-            <img src={gambar} alt={makanan.nama} className="list-card-image" />
-          </figure>
-          <div className="card-body">
-            <h2 className="card-title">{makanan.nama}</h2>
-            <div className="grid gap-3">
-              <div className="flex items-center justify-between border-b border-base-300 pb-3">
-                <span>Kategori</span>
-                <span className="font-bold">{makanan.kategori}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-base-300 pb-3">
-                <span>Kalori</span>
-                <span className="font-bold text-primary">
-                  {makanan.kalori} kkal
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-b border-base-300 pb-3">
-                <span>Karbohidrat</span>
-                <span className="font-bold">{makanan.karbohidrat} g</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-base-300 pb-3">
-                <span>Protein</span>
-                <span className="font-bold">{makanan.protein} g</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Lemak</span>
-                <span className="font-bold">{makanan.lemak} g</span>
-              </div>
+        <section className="meal-detail-nutrition-card">
+          <img src={gambar} alt={makanan.nama} className="meal-detail-nutrition-image" />
+
+          <div className="meal-detail-nutrition-body">
+            <h1>Detail Gizi Makanan per 100 g</h1>
+            <p className="meal-detail-food-name">{makanan.nama}</p>
+
+            <div className="meal-detail-nutrition-list" aria-label="Detail gizi makanan">
+              {nutritionItems.map((item) => (
+                <div
+                  key={item.label}
+                  className={`meal-detail-nutrition-row ${
+                    item.highlight ? "is-highlight" : ""
+                  }`}
+                >
+                  <span className="meal-detail-nutrition-row__icon">
+                    <FontAwesomeIcon icon={item.icon} />
+                  </span>
+                  <span>{item.label}</span>
+                  <strong>
+                    {formatNutrition(item.value)}{" "}
+                    {formatNutrition(item.value) === "-" ? "" : item.unit}
+                  </strong>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </LayoutUser>
   );

@@ -1,118 +1,235 @@
-import { Link, usePage } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
+import { useState } from "react";
 import LayoutUser from "../../../Layouts/User";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
-import { PolarAreaChart } from "../../../Components/Chart/PolarArea";
+import Swal from "sweetalert2";
+import {
+  faArrowLeft,
+  faBowlFood,
+  faChevronDown,
+  faCircleCheck,
+  faDroplet,
+  faFire,
+  faFloppyDisk,
+  faLeaf,
+  faNotesMedical,
+  faPersonWalking,
+  faRotateLeft,
+  faRulerVertical,
+  faScaleBalanced,
+  faTableList,
+  faUserClock,
+  faVenusMars,
+} from "@fortawesome/free-solid-svg-icons";
+
+function formatNumber(value, decimals = 1) {
+  const rounded = Number(value || 0).toFixed(decimals);
+
+  return rounded.endsWith(".0") ? parseInt(rounded) : rounded;
+}
+
+function displayValue(value, fallback = "-") {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+
+  return value;
+}
+
+function displayUnit(value, unit) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  return `${value} ${unit}`;
+}
+
+function inferActivity(rekamGizi) {
+  const bmr = Number(rekamGizi?.bmr || 0);
+  const tee = Number(rekamGizi?.tee || 0);
+
+  if (!bmr || !tee) {
+    return "-";
+  }
+
+  const ratio = tee / bmr;
+  const factors = [
+    { label: "Sangat Ringan", value: 1.2 },
+    { label: "Ringan", value: 1.4 },
+    { label: "Sedang", value: 1.7 },
+    { label: "Berat", value: 2.0 },
+  ];
+
+  return factors.reduce((closest, item) =>
+    Math.abs(item.value - ratio) < Math.abs(closest.value - ratio)
+      ? item
+      : closest,
+  ).label;
+}
+
+function InfoItem({ icon, label, value }) {
+  return (
+    <div className="nutrition-data-item">
+      <span className="nutrition-data-item__icon">
+        <FontAwesomeIcon icon={icon} />
+      </span>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
+  );
+}
+
+function ResultItem({ icon, label, value, unit, highlight = false }) {
+  return (
+    <div className={`nutrition-result-item ${highlight ? "is-highlight" : ""}`}>
+      <span className="nutrition-result-item__icon">
+        <FontAwesomeIcon icon={icon} />
+      </span>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        {unit && <small>{unit}</small>}
+      </div>
+    </div>
+  );
+}
 
 export default function UserRekamGiziShow() {
   const { rekamGizi } = usePage().props;
+  const [savingResult, setSavingResult] = useState(false);
   const kaloriTotal = Number(rekamGizi?.kalori_total || 0);
-  const formatNumber = (value) => {
-    const rounded = Number(value || 0).toFixed(1);
+  const beratBadan = Number(rekamGizi?.berat_badan || 0);
+  const serat = rekamGizi?.serat ?? (kaloriTotal ? (kaloriTotal / 1000) * 14 : 0);
+  const airMl = rekamGizi?.cairan ?? (beratBadan ? beratBadan * 30 : 0);
+  const aktivitas = inferActivity(rekamGizi);
 
-    return rounded.endsWith(".0") ? parseInt(rounded) : rounded;
-  };
-
-  // Tambahan Serat dan Natrium
-  const serat = kaloriTotal ? (kaloriTotal / 1000) * 14 : 0;
-  const natrium = 1500;
-  const chartNutrisi = [
-    { label: "Karbohidrat", value: Number(rekamGizi.karbohidrat || 0) },
-    { label: "Protein", value: Number(rekamGizi.protein || 0) },
-    { label: "Lemak", value: Number(rekamGizi.lemak || 0) },
-    { label: "Serat", value: Number(serat || 0) },
-  ];
-  const nutrisi = [
+  const summaryData = [
     {
-      label: "Kebutuhan Kalori",
-      value: kaloriTotal ? parseInt(kaloriTotal) : 0,
-      unit: "kkal/hari",
+      icon: faUserClock,
+      label: "Umur",
+      value: displayUnit(rekamGizi.usia, "tahun"),
     },
     {
+      icon: faVenusMars,
+      label: "Jenis Kelamin",
+      value: displayValue(rekamGizi.jenis_kelamin),
+    },
+    {
+      icon: faScaleBalanced,
+      label: "Berat Badan",
+      value: displayUnit(rekamGizi.berat_badan, "kg"),
+    },
+    {
+      icon: faRulerVertical,
+      label: "Tinggi Badan",
+      value: displayUnit(rekamGizi.tinggi_badan, "cm"),
+    },
+    {
+      icon: faPersonWalking,
+      label: "Aktivitas",
+      value: aktivitas,
+    },
+    {
+      icon: faNotesMedical,
+      label: "Riwayat Diabetes",
+      value: displayValue(rekamGizi.riwayat_diabetes),
+    },
+    {
+      icon: faDroplet,
+      label: "Kadar Gula Darah",
+      value:
+        rekamGizi.kadar_gula_darah === null ||
+        rekamGizi.kadar_gula_darah === undefined
+          ? "-"
+          : `${formatNumber(rekamGizi.kadar_gula_darah)} mg/dl`,
+    },
+  ];
+
+  const resultData = [
+    {
+      icon: faFire,
+      label: "Energi",
+      value: kaloriTotal ? parseInt(kaloriTotal) : 0,
+      unit: "kkal",
+      highlight: true,
+    },
+    {
+      icon: faBowlFood,
       label: "Karbohidrat",
       value: formatNumber(rekamGizi.karbohidrat),
-      unit: "g",
+      unit: "gr",
     },
     {
+      icon: faBowlFood,
       label: "Protein",
       value: formatNumber(rekamGizi.protein),
-      unit: "g",
+      unit: "gr",
     },
     {
+      icon: faBowlFood,
       label: "Lemak",
       value: formatNumber(rekamGizi.lemak),
-      unit: "g",
+      unit: "gr",
     },
     {
+      icon: faLeaf,
       label: "Serat",
       value: formatNumber(serat),
-      unit: "g/hari",
+      unit: "gr",
     },
     {
-      label: "Natrium",
-      value: natrium,
-      unit: "mg/hari",
-      note: "Batasi konsumsi garam berlebih.",
+      icon: faDroplet,
+      label: "Cairan",
+      value: formatNumber(airMl, 0),
+      unit: "ml",
     },
   ];
-  const chartData = {
-    labels: chartNutrisi.map((item) => item.label),
-    datasets: [
+
+  function saveResult() {
+    if (savingResult) {
+      return;
+    }
+
+    setSavingResult(true);
+
+    router.post(
+      `/user/rekam-gizi/${rekamGizi.id}/simpan-hasil`,
+      {},
       {
-        label: "Kebutuhan Gizi",
-        data: chartNutrisi.map((item) => item.value),
-        backgroundColor: [
-          "rgba(15, 118, 110, 0.72)",
-          "rgba(21, 94, 117, 0.64)",
-          "rgba(197, 138, 19, 0.68)",
-          "rgba(22, 132, 87, 0.58)",
-        ],
-        borderColor: [
-          "rgba(15, 118, 110, 1)",
-          "rgba(21, 94, 117, 1)",
-          "rgba(197, 138, 19, 1)",
-          "rgba(22, 132, 87, 1)",
-        ],
-        borderWidth: 1,
-      },
-    ],
-  };
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "bottom",
-        labels: {
-          boxWidth: 10,
-          boxHeight: 10,
-          usePointStyle: true,
+        preserveScroll: true,
+        onSuccess: async () => {
+          await Swal.fire({
+            icon: "success",
+            title: "Berhasil",
+            text: "Data nutrisi harian berhasil disimpan.",
+            timer: 1600,
+            showConfirmButton: false,
+            confirmButtonColor: "#0f766e",
+          });
+
+          router.visit("/user/menu-rekomendasi");
+        },
+        onError: () => {
+          setSavingResult(false);
+          Swal.fire({
+            icon: "error",
+            title: "Gagal",
+            text: "Data nutrisi harian belum berhasil disimpan.",
+            confirmButtonColor: "#0f766e",
+          });
         },
       },
-      tooltip: {
-        callbacks: {
-          label: (context) => `${context.label}: ${context.raw} g`,
-        },
-      },
-    },
-    scales: {
-      r: {
-        ticks: {
-          display: false,
-        },
-        grid: {
-          color: "rgba(100, 116, 139, 0.16)",
-        },
-      },
-    },
-  };
+    );
+  }
 
   return (
     <LayoutUser>
-      <div className="page-stack">
+      <div className="page-stack nutrition-result-page">
         <div className="page-header">
           <Link
-            href={"/user/rekam-gizi/create"}
+            href="/user/rekam-gizi/create"
             className="back-link"
             aria-label="Kembali"
           >
@@ -124,52 +241,82 @@ export default function UserRekamGiziShow() {
           </div>
         </div>
 
-        <section className="metric-grid">
-          <div className="metric-card">
-            <p className="metric-card__label">Kebutuhan Kalori Harian</p>
-            <p className="metric-card__value">
-              {kaloriTotal ? parseInt(kaloriTotal) : 0}
-            </p>
-            <p className="metric-card__unit">kkal/hari</p>
-          </div>
-          <div className="metric-card">
-            <p className="metric-card__label">Indeks Massa Tubuh</p>
-            <p className="metric-card__value">{rekamGizi.imt}</p>
-            <p className="metric-card__unit">{rekamGizi.status_gizi}</p>
+        <section className="nutrition-success-card">
+          <span>
+            <FontAwesomeIcon icon={faCircleCheck} />
+          </span>
+          <div>
+            <h2>Perhitungan Selesai</h2>
           </div>
         </section>
 
-        <section className="card">
-          <div className="card-body">
-            <h2 className="card-title">Rincian Kebutuhan Gizi</h2>
-            <div className="nutrition-chart">
-              <PolarAreaChart data={chartData} options={chartOptions} />
-            </div>
-            <div className="grid gap-3">
-              {/* Tambahan Serat dan Natrium */}
-              {nutrisi.map((item) => (
-                <div
+        <details className="nutrition-summary-accordion">
+          <summary className="nutrition-summary-accordion__trigger">
+            <span className="nutrition-summary-accordion__icon">
+              <FontAwesomeIcon icon={faTableList} />
+            </span>
+            <span className="nutrition-summary-accordion__text">
+              <strong>Ringkasan Data</strong>
+              <small>Klik untuk melihat detail</small>
+            </span>
+            <FontAwesomeIcon
+              icon={faChevronDown}
+              className="nutrition-summary-accordion__chevron"
+            />
+          </summary>
+
+          <div className="nutrition-summary-accordion__content">
+            <div className="nutrition-data-grid nutrition-data-grid--compact">
+              {summaryData.map((item) => (
+                <InfoItem
                   key={item.label}
-                  className="flex items-center justify-between border-b border-base-300 pb-3 last:border-b-0 last:pb-0"
-                >
-                  <span>
-                    {item.label}
-                    {item.note && (
-                      <small className="block text-slate-500">{item.note}</small>
-                    )}
-                  </span>
-                  <span className="font-bold text-primary">
-                    {item.value} {item.unit}
-                  </span>
-                </div>
+                  icon={item.icon}
+                  label={item.label}
+                  value={item.value}
+                />
               ))}
             </div>
           </div>
+        </details>
+
+        <section className="nutrition-section-card">
+          <div className="nutrition-section-header">
+            <div>
+              <h2>Hasil Nutrisi Harian</h2>
+            </div>
+          </div>
+
+          <div className="nutrition-mini-note">Estimasi kebutuhan gizi harian</div>
+
+          <div className="nutrition-result-grid">
+            {resultData.map((item) => (
+              <ResultItem
+                key={item.label}
+                icon={item.icon}
+                label={item.label}
+                value={item.value}
+                unit={item.unit}
+                highlight={item.highlight}
+              />
+            ))}
+          </div>
         </section>
 
-        <Link href={"/"} className="btn btn-primary w-full">
-          Simpan Hasil
-        </Link>
+        <div className="nutrition-result-actions">
+          <Link href="/user/rekam-gizi/create" className="btn btn-soft">
+            <FontAwesomeIcon icon={faRotateLeft} />
+            Hitung Ulang
+          </Link>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={savingResult}
+            onClick={saveResult}
+          >
+            <FontAwesomeIcon icon={faFloppyDisk} />
+            {savingResult ? "Menyimpan..." : "Simpan Hasil"}
+          </button>
+        </div>
       </div>
     </LayoutUser>
   );

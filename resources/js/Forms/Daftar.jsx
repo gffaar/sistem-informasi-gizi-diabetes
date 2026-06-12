@@ -15,14 +15,61 @@ export default function FormDaftar() {
   });
 
   const [preview, setPreview] = useState(null);
+  const [clientErrors, setClientErrors] = useState({});
+
+  const fieldError = (field) => clientErrors[field] || errors[field];
+
+  function updateField(field, value) {
+    setData(field, value);
+    setClientErrors((current) => {
+      const next = { ...current };
+      delete next[field];
+
+      if (field === "password") {
+        delete next.password_confirmation;
+      }
+
+      return next;
+    });
+  }
+
+  function validateForm() {
+    const nextErrors = {};
+
+    if (!data.password) {
+      nextErrors.password = "Password wajib diisi.";
+    } else if (data.password.length < 6) {
+      nextErrors.password = "Password minimal 6 karakter.";
+    }
+
+    if (!data.password_confirmation) {
+      nextErrors.password_confirmation = "Konfirmasi password wajib diisi.";
+    } else if (data.password !== data.password_confirmation) {
+      nextErrors.password_confirmation = "Konfirmasi password tidak sama.";
+    }
+
+    setClientErrors(nextErrors);
+
+    return Object.keys(nextErrors).length === 0;
+  }
 
   function submit(e) {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     post("/daftar");
   }
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+
+    if (!file) {
+      return;
+    }
+
     setData("foto", file);
     setPreview(URL.createObjectURL(file));
   };
@@ -37,35 +84,45 @@ export default function FormDaftar() {
           type="text"
           className="input"
           placeholder="Username"
+          autoComplete="username"
+          required
           value={data.username}
-          onChange={(e) => setData("username", e.target.value)}
+          onChange={(e) => updateField("username", e.target.value)}
         />
-        {errors.username && (
-          <span className="text-error">{errors.username}</span>
+        {fieldError("username") && (
+          <span className="text-error">{fieldError("username")}</span>
         )}
 
         <label className="label">Password</label>
         <input
           type="password"
           className="input"
-          placeholder="Password"
+          placeholder="Minimal 6 karakter"
+          autoComplete="new-password"
+          minLength={6}
+          required
           value={data.password}
-          onChange={(e) => setData("password", e.target.value)}
+          onChange={(e) => updateField("password", e.target.value)}
         />
-        {errors.password && (
-          <span className="text-error">{errors.password}</span>
+        {fieldError("password") && (
+          <span className="text-error">{fieldError("password")}</span>
         )}
 
-        <label className="label">Password Konfirmasi</label>
+        <label className="label">Konfirmasi Password</label>
         <input
           type="password"
           className="input"
-          placeholder="Password Konfirmasi"
+          placeholder="Ulangi password"
+          autoComplete="new-password"
+          minLength={6}
+          required
           value={data.password_confirmation}
-          onChange={(e) => setData("password_confirmation", e.target.value)}
+          onChange={(e) => updateField("password_confirmation", e.target.value)}
         />
-        {errors.password_confirmation && (
-          <span className="text-error">{errors.password_confirmation}</span>
+        {fieldError("password_confirmation") && (
+          <span className="text-error">
+            {fieldError("password_confirmation")}
+          </span>
         )}
 
         <label className="label">Nama</label>
@@ -73,34 +130,39 @@ export default function FormDaftar() {
           type="text"
           className="input"
           placeholder="Nama"
+          autoComplete="name"
+          required
           value={data.nama}
-          onChange={(e) => setData("nama", e.target.value)}
+          onChange={(e) => updateField("nama", e.target.value)}
         />
-        {errors.nama && <span className="text-error">{errors.nama}</span>}
+        {fieldError("nama") && (
+          <span className="text-error">{fieldError("nama")}</span>
+        )}
 
         <label className="label">Jenis Kelamin</label>
         <select
-          defaultValue={data.jenis_kelamin}
+          value={data.jenis_kelamin}
           className="select"
-          onChange={(e) => setData("jenis_kelamin", e.target.value)}
+          required
+          onChange={(e) => updateField("jenis_kelamin", e.target.value)}
         >
-          <option disabled={true}>Pilih Jenis Kelamin</option>
-          <option>Laki-laki</option>
-          <option>Perempuan</option>
+          <option value="Laki-laki">Laki-laki</option>
+          <option value="Perempuan">Perempuan</option>
         </select>
-        {errors.jenis_kelamin && (
-          <span className="text-error">{errors.jenis_kelamin}</span>
+        {fieldError("jenis_kelamin") && (
+          <span className="text-error">{fieldError("jenis_kelamin")}</span>
         )}
         <label className="label">Tanggal Lahir</label>
         <input
           type="date"
           className="input"
           placeholder="Tanggal Lahir"
+          required
           value={data.tanggal_lahir}
-          onChange={(e) => setData("tanggal_lahir", e.target.value)}
+          onChange={(e) => updateField("tanggal_lahir", e.target.value)}
         />
-        {errors.tanggal_lahir && (
-          <span className="text-error">{errors.tanggal_lahir}</span>
+        {fieldError("tanggal_lahir") && (
+          <span className="text-error">{fieldError("tanggal_lahir")}</span>
         )}
 
         <label className="label">Tinggi CM</label>
@@ -109,11 +171,13 @@ export default function FormDaftar() {
           type="number"
           className="input"
           placeholder="Tinggi CM"
+          min="1"
+          required
           value={data.tinggi_cm}
-          onChange={(e) => setData("tinggi_cm", e.target.value)}
+          onChange={(e) => updateField("tinggi_cm", e.target.value)}
         />
-        {errors.tinggi_cm && (
-          <span className="text-error">{errors.tinggi_cm}</span>
+        {fieldError("tinggi_cm") && (
+          <span className="text-error">{fieldError("tinggi_cm")}</span>
         )}
 
         <label className="label">Berat KG</label>
@@ -122,11 +186,13 @@ export default function FormDaftar() {
           type="number"
           className="input"
           placeholder="Berat KG"
+          min="1"
+          required
           value={data.berat_kg}
-          onChange={(e) => setData("berat_kg", e.target.value)}
+          onChange={(e) => updateField("berat_kg", e.target.value)}
         />
-        {errors.berat_kg && (
-          <span className="text-error">{errors.berat_kg}</span>
+        {fieldError("berat_kg") && (
+          <span className="text-error">{fieldError("berat_kg")}</span>
         )}
 
         <label className="label">Foto</label>
@@ -136,7 +202,9 @@ export default function FormDaftar() {
           className="file-input"
           onChange={handleImageChange}
         />
-        {errors.foto && <span className="text-error">{errors.foto}</span>}
+        {fieldError("foto") && (
+          <span className="text-error">{fieldError("foto")}</span>
+        )}
 
         {preview && (
           <div className="mb-4">
@@ -156,7 +224,7 @@ export default function FormDaftar() {
         )}
 
         <button className="btn btn-primary w-full mt-4" disabled={processing}>
-          Simpan
+          {processing ? "Mendaftarkan..." : "Daftar"}
         </button>
       </fieldset>
     </form>

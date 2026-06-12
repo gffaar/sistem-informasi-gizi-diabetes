@@ -6,10 +6,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 export default function AdminPenggunaRekomendasiIndex() {
-  const { pengguna, rekamGizi, menuRekomendasi, filters, total } =
+  const { pengguna, rekamGizi, menuRekomendasi = [], filters = {}, total = {}, hasMenuMakanan = true } =
     usePage().props;
 
   const [search, setSearch] = useState(filters.search || "");
+  const canGenerate = Boolean(rekamGizi?.id) && hasMenuMakanan;
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -62,7 +63,9 @@ export default function AdminPenggunaRekomendasiIndex() {
         <div className="page-header">
           <div className="page-header__content">
             <p className="page-title">Data Menu Rekomendasi</p>
-            <p className="page-subtitle">Menu harian untuk {pengguna.user.nama}</p>
+            <p className="page-subtitle">
+              Menu harian untuk {pengguna.user?.nama || "pasien"}
+            </p>
           </div>
         </div>
         <div className="segmented-control">
@@ -108,12 +111,19 @@ export default function AdminPenggunaRekomendasiIndex() {
               </tr>
             </thead>
             <tbody>
-              {menuRekomendasi.map((menu) => (
+              {menuRekomendasi.map((menu) => {
+                const makanan = menu.menu_makanan;
+
+                if (!makanan) {
+                  return null;
+                }
+
+                return (
                 <tr key={menu.id}>
                   <th>
-                    {menu.menu_makanan.gambar ? (
+                    {makanan.gambar ? (
                       <img
-                        src={`/storage/${menu.menu_makanan.gambar}`}
+                        src={`/storage/${makanan.gambar}`}
                         alt="Makanan"
                         style={{ minWidth: "100px", maxWidth: "100px" }}
                       />
@@ -125,12 +135,12 @@ export default function AdminPenggunaRekomendasiIndex() {
                       />
                     )}
                   </th>
-                  <td>{menu.menu_makanan.nama}</td>
-                  <td>{menu.menu_makanan.kalori * menu.jumlah}</td>
-                  <td>{menu.menu_makanan.karbohidrat * menu.jumlah}</td>
-                  <td>{menu.menu_makanan.protein * menu.jumlah}</td>
-                  <td>{menu.menu_makanan.lemak * menu.jumlah}</td>
-                  <td>{menu.jumlah} x {menu.menu_makanan.satuan}</td>
+                  <td>{makanan.nama}</td>
+                  <td>{makanan.kalori * menu.jumlah}</td>
+                  <td>{makanan.karbohidrat * menu.jumlah}</td>
+                  <td>{makanan.protein * menu.jumlah}</td>
+                  <td>{makanan.lemak * menu.jumlah}</td>
+                  <td>{menu.jumlah} x {makanan.satuan}</td>
                   <td>{menu.waktu_makan}</td>
                   <td>
                     <button
@@ -143,32 +153,55 @@ export default function AdminPenggunaRekomendasiIndex() {
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
+              {menuRekomendasi.length === 0 && (
+                <tr>
+                  <td colSpan="9">
+                    <section className="empty-state">
+                      <p className="empty-state__title">
+                        Belum ada menu rekomendasi
+                      </p>
+                      <p className="empty-state__text">
+                        {hasMenuMakanan
+                          ? "Tambahkan manual atau buat otomatis dari rekam gizi terbaru."
+                          : "Tambahkan data makanan terlebih dahulu."}
+                      </p>
+                    </section>
+                  </td>
+                </tr>
+              )}
             </tbody>
             <tfoot>
               <tr>
                 <th></th>
                 <th>Total</th>
-                <th>{total.kalori}</th>
-                <th>{total.karbohidrat}</th>
-                <th>{total.protein}</th>
-                <th>{total.lemak}</th>
+                <th>{total.kalori ?? 0}</th>
+                <th>{total.karbohidrat ?? 0}</th>
+                <th>{total.protein ?? 0}</th>
+                <th>{total.lemak ?? 0}</th>
                 <th></th>
                 <th></th>
               </tr>
               <tr>
                 <th></th>
                 <th>Kebutuhan</th>
-                <th>{rekamGizi.kalori_total}</th>
-                <th>{rekamGizi.karbohidrat}</th>
-                <th>{rekamGizi.protein}</th>
-                <th>{rekamGizi.lemak}</th>
+                <th>{rekamGizi?.kalori_total ?? 0}</th>
+                <th>{rekamGizi?.karbohidrat ?? 0}</th>
+                <th>{rekamGizi?.protein ?? 0}</th>
+                <th>{rekamGizi?.lemak ?? 0}</th>
                 <th></th>
                 <th></th>
               </tr>
             </tfoot>
           </table>
-          <button className="btn btn-primary m-4" onClick={handleOtomatis}>Otomatis</button>
+          <button
+            className="btn btn-primary m-4"
+            onClick={handleOtomatis}
+            disabled={!canGenerate}
+          >
+            Otomatis
+          </button>
         </div>
       </div>
       <div className="fixed bottom-20 right-10">

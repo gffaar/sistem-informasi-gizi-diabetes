@@ -1,11 +1,29 @@
 import { Link, router, usePage } from "@inertiajs/react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import LayoutAdmin from "../../../Layouts/Admin";
 
+function formatDate(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
 export default function AdminInformasiIndex() {
-  const { informasis, filters } = usePage().props;
+  const { informasis, filters = {} } = usePage().props;
+  const items = informasis?.data ?? [];
   const [search, setSearch] = useState(filters.search || "");
 
   useEffect(() => {
@@ -24,92 +42,127 @@ export default function AdminInformasiIndex() {
     router.visit(url, { preserveState: true });
   };
 
+  const confirmDelete = (informasi) => {
+    Swal.fire({
+      title: "Hapus edukasi?",
+      text: `Artikel ${informasi.judul} akan dihapus.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Hapus",
+      cancelButtonText: "Batal",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        router.delete(`/admin/informasi/${informasi.id}`);
+      }
+    });
+  };
+
   return (
     <LayoutAdmin>
-      <div className="page-stack">
-        <div className="page-header">
-          <div className="page-header__content">
-            <p className="page-title">Data Informasi</p>
-            <p className="page-subtitle">Kelola artikel edukasi diabetes</p>
-          </div>
-        </div>
-
-        <input
-          type="text"
-          placeholder="Cari informasi"
-          className="input input-bordered w-full"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <div className="info-hero">
+      <div className="admin-page-stack">
+        <section className="admin-page-heading admin-page-heading--inline">
           <div>
-            <p className="info-hero__title">Informasi Diabetes</p>
-            <p className="info-hero__text">
-              Tambahkan artikel tentang pola makan sehat, olahraga, dan tips menjaga gula darah.
-            </p>
+            <p className="admin-page-heading__eyebrow">Kelola Edukasi</p>
+            <h2>Edukasi Diabetes</h2>
+            <p>Kelola artikel edukasi kesehatan untuk pengguna aplikasi.</p>
           </div>
-        </div>
+          <Link href="/admin/informasi/create" className="admin-primary-button">
+            Tambah Edukasi
+          </Link>
+        </section>
 
-        <div className="info-list">
-          {informasis.data.map((informasi) => (
-            <Link
-              href={`/admin/informasi/${informasi.id}`}
-              key={informasi.id}
-              className="info-list-card"
-            >
-              <img
-                src={informasi.gambar ? `/storage/${informasi.gambar}` : "/no_image.jpg"}
-                alt={informasi.judul}
-                className="info-list-card__image"
-              />
-              <div className="info-list-card__body">
-                <h2 className="info-list-card__title">{informasi.judul}</h2>
-                <p className="info-list-card__text">{informasi.deskripsi}</p>
-                <p className="info-list-card__date">
-                  {new Date(informasi.created_at).toLocaleDateString("id-ID", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
-              <FontAwesomeIcon icon={faChevronRight} className="info-list-card__arrow" />
-            </Link>
-          ))}
-        </div>
+        <section className="admin-panel">
+          <div className="admin-toolbar">
+            <input
+              type="text"
+              placeholder="Cari judul edukasi"
+              className="admin-search-input"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
 
-        {informasis.data.length === 0 && (
-          <p className="py-8 text-center text-slate-500">Belum ada informasi.</p>
-        )}
+          <div className="admin-table-wrap">
+            <table className="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Judul</th>
+                  <th>Kategori</th>
+                  <th>Tanggal</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((informasi) => (
+                  <tr key={informasi.id}>
+                    <td>
+                      <div className="admin-table-title">{informasi.judul}</div>
+                      <span>{informasi.deskripsi}</span>
+                    </td>
+                    <td>
+                      <span className="admin-status-pill">
+                        {informasi.kategori || "Edukasi Diabetes"}
+                      </span>
+                    </td>
+                    <td>{formatDate(informasi.created_at)}</td>
+                    <td>
+                      <div className="admin-table-actions">
+                        <Link
+                          href={`/admin/informasi/${informasi.id}`}
+                          className="admin-action-link"
+                        >
+                          Lihat
+                        </Link>
+                        <Link
+                          href={`/admin/informasi/${informasi.id}/edit`}
+                          className="admin-action-link admin-action-link--edit"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          className="admin-action-link admin-action-link--danger"
+                          onClick={() => confirmDelete(informasi)}
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        <div className="mt-4 flex justify-center gap-2">
-          {informasis.prev_page_url && (
+          {items.length === 0 && (
+            <div className="admin-empty-state">
+              Belum ada edukasi diabetes. Tambahkan artikel edukasi baru.
+            </div>
+          )}
+        </section>
+
+        <div className="admin-pagination">
+          {informasis?.prev_page_url && (
             <button
+              type="button"
               onClick={() => goToPage(informasis.prev_page_url)}
-              className="btn btn-primary"
+              className="admin-secondary-button"
             >
-              Previous
+              Sebelumnya
             </button>
           )}
-          {informasis.next_page_url && (
+          {informasis?.next_page_url && (
             <button
+              type="button"
               onClick={() => goToPage(informasis.next_page_url)}
-              className="btn btn-primary"
+              className="admin-secondary-button"
             >
-              Next
+              Berikutnya
             </button>
           )}
         </div>
-      </div>
-
-      <div className="fixed bottom-20 right-10">
-        <Link
-          href="/admin/informasi/create"
-          className="btn btn-outline btn-primary btn-circle"
-        >
-          <FontAwesomeIcon icon={faPlus} />
-        </Link>
       </div>
     </LayoutAdmin>
   );

@@ -1,4 +1,10 @@
 import { Link, usePage } from "@inertiajs/react";
+import {
+  faBolt,
+  faDroplet,
+  faFireFlameCurved,
+  faGaugeHigh,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   CategoryScale,
@@ -11,12 +17,6 @@ import {
   Tooltip,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import {
-  faBowlFood,
-  faCalculator,
-  faClockRotateLeft,
-  faNewspaper,
-} from "@fortawesome/free-solid-svg-icons";
 import LayoutUser from "../../Layouts/User";
 
 ChartJS.register(
@@ -85,8 +85,69 @@ function calculateBmr(weight, height, age, gender) {
   return null;
 }
 
+const DEFAULT_EDUCATION_IMAGE = "/images/default-diabetes-education.png";
+
+function getEducationImage(gambar) {
+  if (!gambar) {
+    return DEFAULT_EDUCATION_IMAGE;
+  }
+
+  const imagePath = String(gambar);
+
+  if (
+    imagePath.startsWith("/") ||
+    imagePath.startsWith("http://") ||
+    imagePath.startsWith("https://") ||
+    imagePath.startsWith("data:")
+  ) {
+    return imagePath;
+  }
+
+  return `/storage/${imagePath}`;
+}
+
+function getEducationCategory(informasi) {
+  if (informasi.kategori) {
+    return informasi.kategori;
+  }
+
+  const text = `${informasi.judul || ""} ${informasi.deskripsi || ""}`.toLowerCase();
+
+  if (
+    text.includes("makan") ||
+    text.includes("diet") ||
+    text.includes("karbo") ||
+    text.includes("porsi")
+  ) {
+    return "Pola Makan";
+  }
+
+  if (
+    text.includes("gizi") ||
+    text.includes("nutrisi") ||
+    text.includes("kalori")
+  ) {
+    return "Gizi";
+  }
+
+  return "Diabetes";
+}
+
 export default function UserDashboard() {
-  const { rekamGiziTerbaru, pengguna, profilUser, user } = usePage().props;
+  const {
+    rekamGiziTerbaru,
+    pengguna,
+    profilUser,
+    user,
+    riwayatGulaDarah = [],
+    informasiEdukasi = [],
+  } = usePage().props;
+  const chartHistory = Array.isArray(riwayatGulaDarah)
+    ? riwayatGulaDarah.filter(Boolean)
+    : [];
+  const educationItems = Array.isArray(informasiEdukasi)
+    ? informasiEdukasi.filter(Boolean)
+    : [];
   const kalori = rekamGiziTerbaru ? parseInt(rekamGiziTerbaru.kalori_total) : 0;
   const gulaDarah = rekamGiziTerbaru ? rekamGiziTerbaru.kadar_gula_darah : 0;
   const profile = {
@@ -105,17 +166,47 @@ export default function UserDashboard() {
     profile.jenisKelamin
   );
   const incompleteProfileText = "Lengkapi data profil";
+  const chartRecords = chartHistory.length
+    ? chartHistory
+    : [{ tanggal: "Belum ada data", kadar_gula_darah: gulaDarah || 0 }];
   const gulaDarahChartData = {
-    labels: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"],
+    labels: chartRecords.map((record) => {
+      if (record.tanggal === "Belum ada data") {
+        return record.tanggal;
+      }
+
+      return new Date(record.tanggal).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+      });
+    }),
     datasets: [
       {
         label: "Kadar Gula (mg/dL)",
-        data: [180, 165, 150, 145, 135],
-        borderColor: "#0f766e",
-        backgroundColor: "rgba(15, 118, 110, 0.1)",
+        data: chartRecords.map((record) => Number(record.kadar_gula_darah || 0)),
+        borderColor: "#10B981",
+        backgroundColor: (context) => {
+          const { chart } = context;
+          const { ctx, chartArea } = chart;
+
+          if (!chartArea) {
+            return "rgba(16, 185, 129, 0.12)";
+          }
+
+          const gradient = ctx.createLinearGradient(
+            0,
+            chartArea.top,
+            0,
+            chartArea.bottom
+          );
+          gradient.addColorStop(0, "rgba(16, 185, 129, 0.28)");
+          gradient.addColorStop(1, "rgba(16, 185, 129, 0.02)");
+
+          return gradient;
+        },
         borderWidth: 2,
         fill: true,
-        pointBackgroundColor: "#0f766e",
+        pointBackgroundColor: "#10B981",
         pointBorderColor: "#ffffff",
         pointBorderWidth: 2,
         pointRadius: 3,
@@ -135,7 +226,7 @@ export default function UserDashboard() {
         labels: {
           boxHeight: 8,
           boxWidth: 8,
-          color: "#64748b",
+          color: "#10B981",
           font: {
             size: 11,
             weight: "600",
@@ -164,7 +255,7 @@ export default function UserDashboard() {
       y: {
         beginAtZero: false,
         grid: {
-          color: "rgba(100, 116, 139, 0.18)",
+          color: "rgba(148, 163, 184, 0.16)",
         },
         ticks: {
           color: "#64748b",
@@ -175,32 +266,6 @@ export default function UserDashboard() {
       },
     },
   };
-  const menuItems = [
-    {
-      href: "/user/rekam-gizi/create",
-      label: "Hitung Gizi",
-      icon: faCalculator,
-      color: "green",
-    },
-    {
-      href: "/user/menu-rekomendasi",
-      label: "Rekomendasi Makanan",
-      icon: faBowlFood,
-      color: "orange",
-    },
-    {
-      href: "/user/informasi",
-      label: "Sistem Informasi",
-      icon: faNewspaper,
-      color: "blue",
-    },
-    {
-      href: "/user/rekam-gizi",
-      label: "Riwayat",
-      icon: faClockRotateLeft,
-      color: "green",
-    },
-  ];
 
   return (
     <LayoutUser>
@@ -216,18 +281,33 @@ export default function UserDashboard() {
         </section>
 
         <section className="metric-grid" aria-label="Informasi kesehatan otomatis">
-          <div className="metric-card">
-            <p className="metric-card__label">Kebutuhan Kalori</p>
+          <div className="metric-card metric-card--calories">
+            <div className="metric-card__top">
+              <p className="metric-card__label">Kebutuhan Kalori</p>
+              <span className="metric-card__icon">
+                <FontAwesomeIcon icon={faFireFlameCurved} />
+              </span>
+            </div>
             <p className="metric-card__value">{kalori}</p>
             <p className="metric-card__unit">kkal</p>
           </div>
-          <div className="metric-card">
-            <p className="metric-card__label">Kadar Gula Darah</p>
+          <div className="metric-card metric-card--sugar">
+            <div className="metric-card__top">
+              <p className="metric-card__label">Kadar Gula Darah</p>
+              <span className="metric-card__icon">
+                <FontAwesomeIcon icon={faDroplet} />
+              </span>
+            </div>
             <p className="metric-card__value">{gulaDarah}</p>
             <p className="metric-card__unit">mg/dL</p>
           </div>
-          <div className="metric-card">
-            <p className="metric-card__label">BMI / IMT</p>
+          <div className="metric-card metric-card--bmi">
+            <div className="metric-card__top">
+              <p className="metric-card__label">BMI / IMT</p>
+              <span className="metric-card__icon">
+                <FontAwesomeIcon icon={faGaugeHigh} />
+              </span>
+            </div>
             <p
               className={`metric-card__value ${
                 bmi ? "" : "metric-card__value--hint"
@@ -237,8 +317,13 @@ export default function UserDashboard() {
             </p>
             <p className="metric-card__unit">{bmi ? "kg/m2" : "Profil"}</p>
           </div>
-          <div className="metric-card">
-            <p className="metric-card__label">BMR</p>
+          <div className="metric-card metric-card--bmr">
+            <div className="metric-card__top">
+              <p className="metric-card__label">BMR</p>
+              <span className="metric-card__icon">
+                <FontAwesomeIcon icon={faBolt} />
+              </span>
+            </div>
             <p
               className={`metric-card__value ${
                 bmr ? "" : "metric-card__value--hint"
@@ -258,29 +343,79 @@ export default function UserDashboard() {
                 Kadar Gula (mg/dL)
               </p>
             </div>
+            <select
+              aria-label="Filter periode grafik gula darah"
+              className="blood-sugar-chart-card__filter"
+              defaultValue="7"
+            >
+              <option value="7">7 Hari</option>
+            </select>
           </div>
           <div className="blood-sugar-chart-card__canvas">
             <Line data={gulaDarahChartData} options={gulaDarahChartOptions} />
           </div>
         </section>
 
-        <section className="page-stack">
-          <p className="section-title">Menu Utama</p>
-          <div className="menu-grid">
-            {menuItems.map((item) => (
-              <div
-                key={item.href}
-                className={`menu-card menu-card--${item.color}`}
-              >
-                <Link href={item.href}>
-                  <span className="menu-card__icon">
-                    <FontAwesomeIcon icon={item.icon} />
-                  </span>
-                  <span className="menu-card__label">{item.label}</span>
-                </Link>
-              </div>
-            ))}
+        <section
+          className="education-section"
+          aria-labelledby="education-section-title"
+        >
+          <div className="education-section__header">
+            <h2 id="education-section-title" className="section-title">
+              Informasi Edukasi Diabetes
+            </h2>
+            <Link href="/user/informasi" className="education-section__see-all">
+              Lihat Semua <span aria-hidden="true">&gt;</span>
+            </Link>
           </div>
+
+          {educationItems.length > 0 ? (
+            <div
+              className="education-scroll"
+              role="list"
+              aria-label="Daftar informasi edukasi diabetes"
+            >
+              {educationItems.map((informasi, index) => (
+                <Link
+                  key={informasi.id ?? `education-${index}`}
+                  href={
+                    informasi.id
+                      ? `/user/informasi/${informasi.id}`
+                      : "/user/informasi"
+                  }
+                  className="education-card"
+                  role="listitem"
+                >
+                  <img
+                    src={getEducationImage(informasi.gambar)}
+                    alt={informasi.judul || "Informasi edukasi diabetes"}
+                    className="education-card__image"
+                    loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = DEFAULT_EDUCATION_IMAGE;
+                    }}
+                  />
+                  <div className="education-card__body">
+                    <h3 className="education-card__title">
+                      {informasi.judul}
+                    </h3>
+                    <p className="education-card__text">
+                      {informasi.deskripsi ||
+                        "Baca informasi singkat seputar diabetes dan pola hidup sehat."}
+                    </p>
+                    <span className="education-card__label">
+                      {getEducationCategory(informasi)}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="education-empty-state">
+              Belum ada informasi edukasi.
+            </div>
+          )}
         </section>
       </div>
     </LayoutUser>

@@ -2,24 +2,54 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Pengguna;
 use App\Models\ProfilUser;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 
 class AccountController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (! $user) {
+            return redirect()->route('auth.login.form');
+        }
+
         $user->load(['pengguna', 'profilUser']);
 
         return Inertia::render('Account/Index', [
             'user' => $user,
+            'supportsEmail' => Schema::hasColumn('users', 'email'),
+        ]);
+    }
+
+    public function profileUser()
+    {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (! $user) {
+            return redirect()->route('auth.login.form');
+        }
+
+        if ($user->role === 'admin') {
+            return redirect()->route('index');
+        }
+
+        $user->load(['pengguna', 'profilUser']);
+
+        return Inertia::render('Account/ProfileUser', [
+            'user' => $user,
+            'profil' => $user->pengguna,
+            'profilUser' => $user->profilUser,
         ]);
     }
 
@@ -28,39 +58,76 @@ class AccountController extends Controller
         return redirect()->route('account.data');
     }
 
-    public function account()
-    {
-        $user = auth()->user();
-        $user->load(['pengguna', 'profilUser']);
-        $profil = $user->pengguna;
-        $profilUser = ProfilUser::where('user_id', $user->id)->first();
-
-        return Inertia::render('Account/Account', [
-            'user' => $user,
-            'profil' => $profil,
-            'profilUser' => $profilUser,
-        ]);
-    }
-
     public function update(Request $request)
     {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (! $user) {
+            return redirect()->route('auth.login.form');
+        }
+
+        if ($user->role === 'admin') {
+            $supportsEmail = Schema::hasColumn('users', 'email');
+            $rules = [
+                'nama' => ['required', 'string', 'max:255'],
+                'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
+                'foto' => ['nullable', 'image', 'max:2048', 'mimes:jpg,jpeg,png,webp'],
+            ];
+
+            if ($supportsEmail) {
+                $rules['email'] = ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)];
+            }
+
+            $validated = $request->validate($rules, [
+                'nama.required' => 'Nama wajib diisi.',
+                'nama.max' => 'Nama maksimal 255 karakter.',
+                'username.required' => 'Username wajib diisi.',
+                'username.unique' => 'Username sudah digunakan.',
+                'email.email' => 'Email tidak valid.',
+                'email.unique' => 'Email sudah digunakan.',
+                'foto.image' => 'Foto profil harus berupa gambar.',
+                'foto.max' => 'Ukuran foto profil maksimal 2 MB.',
+                'foto.mimes' => 'Foto profil harus berformat jpg, jpeg, png, atau webp.',
+            ]);
+
+            $user->fill([
+                'nama' => $validated['nama'],
+                'username' => $validated['username'],
+            ]);
+
+            if ($supportsEmail) {
+                $user->email = $validated['email'] ?? null;
+            }
+
+            if ($request->hasFile('foto')) {
+                $foto = $request->file('foto');
+                if ($user->foto) {
+                    Storage::disk('public')->delete($user->foto);
+                }
+                $user->foto = $foto->storeAs('gambar/profil', $foto->hashName(), 'public');
+            }
+
+            $user->save();
+
+            return back()->with('success', 'Profil admin berhasil diperbarui.');
+        }
+
         $validated = $request->validate([
-            'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore(auth()->user()->id)],
             'nama' => ['required', 'string', 'max:255'],
-            'jenis_kelamin' => ['nullable', 'string', Rule::in(['Laki-laki', 'Perempuan'])],
-            'tanggal_lahir' => ['nullable', 'date'],
-            'tinggi_cm' => ['nullable', 'numeric', 'min:0'],
-            'berat_kg' => ['nullable', 'numeric', 'min:0'],
-            'umur' => ['nullable', 'integer', 'min:0', 'max:150'],
-            'kadar_gula_darah' => ['nullable', 'numeric', 'min:0'],
-            'riwayat_diabetes' => ['nullable', 'string', Rule::in(['Ya', 'Tidak', 'Tidak tahu'])],
-            'aktivitas_fisik' => ['nullable', 'string', Rule::in(['Rendah', 'Sedang', 'Tinggi'])],
+            'tanggal_lahir' => ['nullable', 'date', 'before_or_equal:today'],
             'foto' => ['nullable', 'image', 'max:2048', 'mimes:jpg,jpeg,png,webp'],
+        ], [
+            'nama.required' => 'Nama wajib diisi.',
+            'nama.max' => 'Nama maksimal 255 karakter.',
+            'tanggal_lahir.date' => 'Tanggal lahir tidak valid.',
+            'tanggal_lahir.before_or_equal' => 'Tanggal lahir tidak boleh melebihi hari ini.',
+            'foto.image' => 'Foto profil harus berupa gambar.',
+            'foto.max' => 'Ukuran foto profil maksimal 2 MB.',
+            'foto.mimes' => 'Foto profil harus berformat jpg, jpeg, png, atau webp.',
         ]);
 
-        $user = auth()->user();
         $user->fill([
-            'username' => $validated['username'],
             'nama' => $validated['nama'],
         ]);
 
@@ -75,53 +142,26 @@ class AccountController extends Controller
         $user->save();
 
         if ($user->role === 'user') {
-            $bmi = $this->calculateBmi(
-                $validated['berat_kg'] ?? null,
-                $validated['tinggi_cm'] ?? null
-            );
+            $tanggalLahir = $validated['tanggal_lahir'] ?? null;
 
             ProfilUser::updateOrCreate(
                 ['user_id' => $user->id],
                 [
-                    'jenis_kelamin' => $validated['jenis_kelamin'] ?? null,
-                    'tanggal_lahir' => $validated['tanggal_lahir'] ?? null,
-                    'umur' => $validated['umur'] ?? $this->calculateAge($validated['tanggal_lahir'] ?? null),
-                    'tinggi_cm' => $validated['tinggi_cm'] ?? null,
-                    'berat_kg' => $validated['berat_kg'] ?? null,
-                    'bmi' => $bmi,
-                    'kadar_gula_darah' => $validated['kadar_gula_darah'] ?? null,
-                    'riwayat_diabetes' => $validated['riwayat_diabetes'] ?? null,
-                    'aktivitas_fisik' => $validated['aktivitas_fisik'] ?? null,
+                    'tanggal_lahir' => $tanggalLahir,
+                    'umur' => $this->calculateAge($tanggalLahir),
                 ]
             );
 
-            $penggunaData = [
-                'jenis_kelamin' => $validated['jenis_kelamin'] ?? null,
-                'tanggal_lahir' => $validated['tanggal_lahir'] ?? null,
-                'tinggi_cm' => $validated['tinggi_cm'] ?? null,
-                'berat_kg' => $validated['berat_kg'] ?? null,
-            ];
-
-            if ($this->isCompletePenggunaData($penggunaData)) {
-                Pengguna::updateOrCreate(
-                    ['user_id' => $user->id],
-                    $penggunaData
-                );
+            if ($user->pengguna) {
+                if ($tanggalLahir) {
+                    $user->pengguna->update([
+                        'tanggal_lahir' => $tanggalLahir,
+                    ]);
+                }
             }
         }
 
-        return redirect()->route('account.index')->with('success', 'Akun berhasil diperbarui.');
-    }
-
-    private function calculateBmi($beratKg, $tinggiCm): ?float
-    {
-        if (! $beratKg || ! $tinggiCm || $tinggiCm <= 0) {
-            return null;
-        }
-
-        $tinggiMeter = $tinggiCm / 100;
-
-        return round($beratKg / ($tinggiMeter * $tinggiMeter), 2);
+        return back()->with('success', 'Pengaturan profil berhasil diperbarui.');
     }
 
     private function calculateAge($tanggalLahir): ?int
@@ -130,45 +170,54 @@ class AccountController extends Controller
             return null;
         }
 
-        return (int) now()->diffInYears(\Illuminate\Support\Carbon::parse($tanggalLahir));
-    }
-
-    private function isCompletePenggunaData(array $data): bool
-    {
-        foreach ($data as $value) {
-            if ($value === null || $value === '') {
-                return false;
-            }
-        }
-
-        return true;
+        return max(0, (int) Carbon::parse($tanggalLahir)->age);
     }
 
     public function password()
     {
-        $user = auth()->user();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (! $user) {
+            return redirect()->route('auth.login.form');
+        }
+
+        $user->load(['pengguna', 'profilUser']);
 
         return Inertia::render('Account/Password', [
             'user' => $user,
+            'profil' => $user->pengguna,
+            'profilUser' => $user->profilUser,
         ]);
     }
 
     public function updatePassword(Request $request)
     {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (! $user) {
+            return redirect()->route('auth.login.form');
+        }
+
         $request->validate([
             'old_password' => ['required', 'string'],
-            'password' => ['required', 'string', 'min:6', 'confirmed', Password::min(6)->mixedCase()->numbers()->uncompromised()],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ], [
+            'old_password.required' => 'Password lama wajib diisi.',
+            'password.required' => 'Password baru wajib diisi.',
+            'password.string' => 'Password baru harus berupa teks.',
+            'password.min' => 'Password baru minimal 6 karakter.',
+            'password.confirmed' => 'Konfirmasi password baru tidak sama.',
         ]);
 
-        $user = auth()->user();
-
-        if (!Hash::check($request->old_password, (string) $user->password)) {
+        if (! Hash::check($request->old_password, (string) $user->password)) {
             return redirect()->route('account.password.edit')->with('error', 'Password lama tidak sesuai.');
         }
 
         $user->password = Hash::make($request->password);
         $user->save();
 
-        return redirect()->route('account.index')->with('success', 'Password berhasil diperbarui.');
+        return back()->with('success', 'Password berhasil diperbarui.');
     }
 }

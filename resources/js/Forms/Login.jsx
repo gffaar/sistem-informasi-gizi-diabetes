@@ -41,7 +41,7 @@ export default function FormLogin() {
         )}
 
         <button className="btn btn-primary w-full mt-4" disabled={processing}>
-          Login
+          {processing ? "Masuk..." : "Login"}
         </button>
       </fieldset>
     </form>

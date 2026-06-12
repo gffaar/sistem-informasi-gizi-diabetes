@@ -1,4 +1,4 @@
-import { Link, router, useForm } from "@inertiajs/react";
+import { Link, useForm } from "@inertiajs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCamera,
@@ -11,6 +11,7 @@ import {
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { useMemo, useState } from "react";
+import { confirmLogout } from "../Utils/confirmLogout";
 
 function calculateAge(tanggalLahir) {
   if (!tanggalLahir) {
@@ -141,10 +142,6 @@ export default function FormAccountEdit({
     setPreview(
       user?.foto ? `/storage/${user.foto}` : "/no_profile_picture.png",
     );
-  }
-
-  function handleLogout() {
-    router.get("/logout");
   }
 
   return (
@@ -387,7 +384,7 @@ export default function FormAccountEdit({
             </Link>
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={confirmLogout}
               className="btn btn-error"
             >
               <FontAwesomeIcon icon={faSignOut} />

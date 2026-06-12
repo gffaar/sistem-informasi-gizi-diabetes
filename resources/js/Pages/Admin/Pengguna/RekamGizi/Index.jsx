@@ -5,6 +5,7 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 export default function AdminPenggunaRekamGiziIndex() {
   const { pengguna, rekamGizi } = usePage().props;
+  const records = rekamGizi ?? [];
 
   return (
     <LayoutAdmin>
@@ -12,11 +13,13 @@ export default function AdminPenggunaRekamGiziIndex() {
         <div className="page-header">
           <div className="page-header__content">
             <p className="page-title">Rekam Gizi Pasien</p>
-            <p className="page-subtitle">Riwayat pengukuran {pengguna.user.nama}</p>
+            <p className="page-subtitle">
+              Riwayat pengukuran {pengguna.user?.nama || "pasien"}
+            </p>
           </div>
         </div>
         <div className="content-card-grid">
-          {rekamGizi.map((rg) => (
+          {records.map((rg) => (
             <div key={rg.id} className="card">
               <div className="card-body">
                 <h2 className="card-title">{rg.tanggal}</h2>
@@ -34,6 +37,14 @@ export default function AdminPenggunaRekamGiziIndex() {
             </div>
           ))}
         </div>
+        {records.length === 0 && (
+          <section className="empty-state">
+            <p className="empty-state__title">Belum ada rekam gizi</p>
+            <p className="empty-state__text">
+              Tambahkan hasil pengukuran untuk pasien ini.
+            </p>
+          </section>
+        )}
       </div>
       <div className="fixed bottom-20 right-10">
         <Link

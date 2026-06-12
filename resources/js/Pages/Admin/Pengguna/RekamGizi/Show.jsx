@@ -51,58 +51,114 @@ export default function AdminPenggunaRekamGiziShow() {
       },
     ],
   };
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          boxWidth: 10,
+          boxHeight: 10,
+          padding: 10,
+          usePointStyle: true,
+        },
+      },
+    },
+    scales: {
+      r: {
+        ticks: {
+          display: false,
+        },
+      },
+    },
+  };
+  const userData = [
+    {
+      label: "Usia",
+      value: `${rekamGizi.usia} tahun`,
+    },
+    {
+      label: "Tinggi Badan",
+      value: `${rekamGizi.tinggi_badan} cm`,
+    },
+    {
+      label: "Berat Badan",
+      value: `${rekamGizi.berat_badan} kg`,
+    },
+    {
+      label: "Gula Darah Terakhir",
+      value: `${rekamGizi.kadar_gula_darah} mg/dL`,
+    },
+    {
+      label: "BMR",
+      value: rekamGizi.bmr,
+    },
+    {
+      label: "TEE",
+      value: rekamGizi.tee,
+    },
+  ];
 
   return (
     <LayoutAdmin>
-      <div className="page-stack">
-        <div className="page-header">
-          <div className="page-header__content">
-            <p className="page-title">Rekam Gizi Pasien</p>
-            <p className="page-subtitle">Hasil pengukuran {rekamGizi.tanggal}</p>
+      <div className="admin-record-screen">
+        <section className="admin-record-header">
+          <div>
+            <p className="admin-record-header__eyebrow">Rekam Gizi Pasien</p>
+            <h2>Rekam Gizi Pasien</h2>
+            <p>Hasil pengukuran {rekamGizi.tanggal}</p>
           </div>
-        </div>
-
-        <section className="metric-grid">
-          <div className="metric-card">
-            <p className="metric-card__label">Kalori Harian</p>
-            <p className="metric-card__value">
-              {parseInt(rekamGizi.kalori_total)}
-            </p>
-            <p className="metric-card__unit">kkal</p>
-          </div>
-          <div className="metric-card">
-            <p className="metric-card__label">IMT</p>
-            <p className="metric-card__value">{rekamGizi.imt}</p>
-            <p className="metric-card__unit">{rekamGizi.status_gizi}</p>
-          </div>
-        </section>
-
-        <section className="card">
-          <div className="card-body">
-            <h2 className="card-title">{rekamGizi.nama}</h2>
-            <div className="grid gap-2">
-              <p>Usia: {rekamGizi.usia} tahun</p>
-              <p>Tinggi Badan: {rekamGizi.tinggi_badan} cm</p>
-              <p>Berat Badan: {rekamGizi.berat_badan} kg</p>
-              <p>Gula Darah Terakhir: {rekamGizi.kadar_gula_darah} mg/dL</p>
-              <p>BMR: {rekamGizi.bmr}</p>
-              <p>TEE: {rekamGizi.tee}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="card">
-          <div className="card-body">
-            <h2 className="card-title">Distribusi Gizi</h2>
-            <PolarAreaChart data={chartData} />
-          </div>
-        </section>
-
-        <div className="flex justify-end">
           <button onClick={handleDelete} className="btn btn-error">
             Hapus
           </button>
-        </div>
+        </section>
+
+        <section className="admin-record-layout">
+          <div className="admin-record-main">
+            <section className="admin-record-metrics" aria-label="Ringkasan gizi">
+              <article className="admin-record-metric">
+                <p>Kalori Harian</p>
+                <strong>{parseInt(rekamGizi.kalori_total)}</strong>
+                <span>kkal</span>
+              </article>
+              <article className="admin-record-metric">
+                <p>IMT</p>
+                <strong>{rekamGizi.imt}</strong>
+                <span>{rekamGizi.status_gizi}</span>
+              </article>
+            </section>
+
+            <section className="admin-record-card admin-record-patient-card">
+              <div className="admin-record-card__header">
+                <div>
+                  <h3>{rekamGizi.nama}</h3>
+                  <p>Informasi data pasien</p>
+                </div>
+              </div>
+              <div className="admin-record-data-grid">
+                {userData.map((item) => (
+                  <div key={item.label} className="admin-record-data-item">
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <section className="admin-record-card admin-record-chart-card">
+            <div className="admin-record-card__header">
+              <div>
+                <h3>Distribusi Gizi</h3>
+                <p>Perbandingan hasil rekam gizi pasien</p>
+              </div>
+            </div>
+            <div className="admin-record-chart">
+              <PolarAreaChart data={chartData} options={chartOptions} />
+            </div>
+          </section>
+        </section>
       </div>
     </LayoutAdmin>
   );

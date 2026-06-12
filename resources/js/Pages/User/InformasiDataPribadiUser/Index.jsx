@@ -3,12 +3,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import FormAccountEdit from "../../../Forms/AccountEdit";
 import LayoutUser from "../../../Layouts/User";
+import LayoutAdmin from "../../../Layouts/Admin";
 
 export default function InformasiDataPribadiUserIndex() {
   const { user, profil, profilUser } = usePage().props;
+  const Layout = user?.role === "admin" ? LayoutAdmin : LayoutUser;
 
   return (
-    <LayoutUser>
+    <Layout>
       <div className="page-stack">
         <div className="page-header">
           <Link href="/account" className="back-link" aria-label="Kembali">
@@ -29,6 +31,6 @@ export default function InformasiDataPribadiUserIndex() {
           showAccountSettings={false}
         />
       </div>
-    </LayoutUser>
+    </Layout>
   );
 }

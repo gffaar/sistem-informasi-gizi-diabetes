@@ -32,14 +32,14 @@ export default function AdminPenggunaShow() {
         </div>
         <div className="card">
           <figure className="pt-6">
-            {pengguna.user.foto ? (
+            {pengguna.user?.foto ? (
               <img src={`/storage/${pengguna.user.foto}`} alt="Foto Profil" className="h-28 w-28 rounded-full object-cover" />
             ) : (
               <img src={`/no_profile_picture.png`} alt="Foto Profil" className="h-28 w-28 rounded-full object-cover" />
             )}
           </figure>
           <div className="card-body">
-            <h2 className="card-title">{pengguna.user.nama}</h2>
+            <h2 className="card-title">{pengguna.user?.nama || "Pasien"}</h2>
             <p>Jenis Kelamin: {pengguna.jenis_kelamin}</p>
             <p>Tanggal Lahir: {pengguna.tanggal_lahir}</p>
             <p>Tinggi Badan: {pengguna.tinggi_cm} cm</p>

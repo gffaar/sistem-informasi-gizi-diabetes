@@ -12,10 +12,12 @@ class PenggunaController extends Controller
     public function index(Request $request)
     {
         $search = $request->query('search');
-        $penggunas = Pengguna::with('user')
+        $penggunas = Pengguna::with('user.profilUser')
             ->when($search, function ($query, $search) {
                 $query->whereHas('user', function ($queryUser) use ($search) {
-                    $queryUser->where('nama', 'like', '%' . $search . '%');
+                    $queryUser
+                        ->where('nama', 'like', '%'.$search.'%')
+                        ->orWhere('username', 'like', '%'.$search.'%');
                 });
             })
             ->latest()
@@ -35,7 +37,8 @@ class PenggunaController extends Controller
         ]);
     }
 
-    public function destroy(Pengguna $pengguna) {
+    public function destroy(Pengguna $pengguna)
+    {
         $user = $pengguna->user;
         $user->delete();
         $pengguna->delete();
